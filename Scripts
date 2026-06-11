@@ -1,0 +1,21 @@
+# Command to check if the domain is federated or managed. A syndicated GoDaddy domain will show as Federated.
+Import-Module Microsoft.Graph.Authentication
+Connect-MgGraph -Scopes "Domain.ReadWrite.All", "Directory.AccessAsUser.All"
+Get-MgDomain
+
+# This is the command that defederates the domain / changes it to managed
+Update-MgDomain -DomainId "yourcustomdomain.com" -AuthenticationType "Managed"
+Get-MgDomain
+
+# Make sure to change the password of said domain prior to logging out of the powershell. I like to do it with the hashtable below.
+$PasswordProfile = @{
+    Password = "TemporaryPasswordHere"
+    ForceChangePasswordNextSignIn = $true
+}
+Update-MgUser -UserId "user@yourcustomdomain.com" -PasswordProfile $PasswordProfile
+
+# I ran this afterwards to change the UPN on the new tenant to get the user back to their previous name.
+Install-Module Microsoft.Graph.Users -Force
+Connect-MgGraph -Scopes "User.ReadWrite.All"
+Update-MgUser -UserId "User@yourdestinationtenant.onmicrosoft.com" -UserPrincipalName "User@yourcustomdomain.com"
+Get-MgUser -UserId "User@yourcustomdomain.com" | Select-Object DisplayName, UserPrincipalName, Id
